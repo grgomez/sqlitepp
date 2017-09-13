@@ -9,7 +9,9 @@ int main ()
 		
 		Statement statement;
 		
-		statement.Prepare(connection, "select 'Hello' union all select 'world'");
+		statement.Prepare(connection, "select ?1 union all select ?2");
+		statement.Bind(1, "Hello");
+		statement.Bind(2, "World");
 		
 		for (Row const & row : statement)
 		{

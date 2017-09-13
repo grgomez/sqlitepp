@@ -16,6 +16,18 @@
 #define assert(condition) /*implementation defined*/
 #endif
 
+/*
+ * TODO
+ *
+ * Add macros to disable UTF-16 (wide character) functionality
+ *
+ * DISABLE_UTF_16_FUNC
+ *
+ * This may be unnecessary, but it could also cut down on
+ * code that is not needed when the kernel/OS doesn't
+ * the character encoding
+ */
+ 
 struct Exception
 {
 	int Result = 0;
@@ -256,6 +268,73 @@ class Statement : public Reader<Statement>
 		void Execute() const
 		{
 			assert(!Step());
+		}
+
+		void Bind(int const index, int const value) const
+		{
+			if(SQLITE_OK != sqlite3_bind_int(GetAbi(), index, value))
+			{
+				ThrowLastError();
+			}
+		}
+		
+		void Bind(int const index, char const * const value, int const size = -1) const
+		{
+			if (SQLITE_OK != sqlite3_bind_text(GetAbi(), 
+							   index, 
+							   value, 
+							   size, 
+							   SQLITE_STATIC))
+			{
+				ThrowLastError();
+			}
+		}
+
+
+		void Bind(int const index, wchar_t const * const value, int const size = -1) const
+		{
+			if (SQLITE_OK != sqlite3_bind_text16(GetAbi(), 
+							     index, 
+ 							     value, 
+						 	     size, 
+							     SQLITE_STATIC))
+			{
+				ThrowLastError();
+			}
+		}
+
+		void Bind(int const index, std::string const & value) const
+		{
+	 		Bind(index, value.c_str(), value.size());
+		}
+
+		void Bind(int const index, std::wstring const & value) const
+		{
+			Bind(index, value.c_str(), value.size() * sizeof(wchar_t));
+		}
+
+		void Bind(int const index, std::string && value) const
+		{
+			if (SQLITE_OK != sqlite3_bind_text(GetAbi(),
+							   index,
+							   value.c_str(),
+							   value.size(),
+							   SQLITE_TRANSIENT))
+			{
+				ThrowLastError();
+			}
+		}
+
+		void Bind(int const index, std:wstring && value) const
+		{
+			if (SQLITE_OK != sqlite3_bind_text16(GetAbi(), 
+							     index,
+							     value.c_str(),
+							     value.size() * sizeof(wchar_t),
+							     SQLITE_TRANSIENT))
+			{
+				ThrowLastError();
+			}
 		}
 };
 
