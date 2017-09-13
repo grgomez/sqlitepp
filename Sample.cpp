@@ -9,9 +9,9 @@ int main ()
 		
 		Statement statement;
 		
-		statement.Prepare(connection, "select 'Hello world'");
+		statement.Prepare(connection, "select 'Hello' union all select 'world'");
 		
-		while (statement.Step())
+		for (Row const & row : statement)
 		{
 			printf("%s\n", statement.GetString(0));
 		}
