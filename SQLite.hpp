@@ -28,6 +28,15 @@
  * the character encoding
  */
  
+enum class Type
+{
+	Integer = SQLITE_INTEGER,
+	Float = SQLITE_FLOAT,
+	Blob = SQLITE_BLOB,
+	Null = SQLITE_NULL,
+	Text = SQLITE_TEXT,
+};
+
 struct Exception
 {
 	int Result = 0;
@@ -132,6 +141,11 @@ class Connection
 		{
 			InternalOpen(sqlite3_open16, filename);
 		}	
+
+		long long RowId() const noexcept
+		{
+			return sqlite3_last_insert_rowid(GetAbi());
+		}
 };
 
 template <typename T>
@@ -166,6 +180,11 @@ struct Reader
 	int GetWideStringLength(int const column = 0) const noexcept
 	{
 		return sqlite3_column_bytes16(static_cast<T const *>(this)->GetAbi(), column) / sizeof(wchar_t);
+	}
+
+	Type GetType(int const column = 0) const noexcept
+	{
+		return static_cast<Type>(sqlite3_column_type(static_cast<T const *>(this)->GetAbi(), column));
 	}
 }; 
 

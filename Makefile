@@ -3,7 +3,7 @@ cc = gcc
 
 LIB = -lpthread -ldl
 CXXLIB = -std=c++11
-BIN = sqlite sample
+BIN = sqlite sample *.o
 
 all : $(BIN)
 sqlite : sqlite3.c shell.c
