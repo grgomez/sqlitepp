@@ -6,16 +6,12 @@ int main ()
 	try
 	{
 		Connection connection = Connection::Memory();
-		
-		Statement statement;
-		
-		statement.Prepare(connection, "select ?1 union all select ?2");
-		statement.Bind(1, "Hello");
-		statement.Bind(2, "World");
-		
-		for (Row const & row : statement)
+		Execute(connection, "create table users(name)");
+		Execute(connection, "insert into users values (?)", "Joe");	
+		Execute(connection, "insert into users values (?)", "Mary");
+		for (Row row : Statement(connection, "select Name from users"))
 		{
-			printf("%s\n", statement.GetString(0));
+			printf("%s\n", row.GetString());
 		}
 	}
 	catch (Exception const & e)

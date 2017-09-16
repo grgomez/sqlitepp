@@ -197,8 +197,8 @@ class Statement : public Reader<Statement>
 	using StatementHandle = Handle<StatementHandleTraits>;
 	StatementHandle m_handle;
 
-	template <typename F, typename C>
-	void InternalPrepare(Connection const & connection, F prepare, C const * const text)
+	template <typename F, typename C, typename ... Values>
+	void InternalPrepare(Connection const & connection, F prepare, C const * const text, Values && ... values)
 	{
 		assert(connection);
 
@@ -206,11 +206,29 @@ class Statement : public Reader<Statement>
 		{
 			connection.ThrowLastError();
 		}
+
+		BindAll(std::forward<Values>(values) ...);
+	}
+
+	void InternalBind(int) const noexcept
+	{}
+
+	template <typename First, typename ... Rest>
+	void InternalBind(int const index, First && first, Rest && ... rest) const
+	{
+		Bind(index, std::forward<First>(first));
+		InternalBind(index + 1, std::forward<Rest>(rest) ...);
 	}
 
 	public:
 		
 		Statement() noexcept = default;
+
+		template <typename C, typename ... Values>
+		Statement(Connection const & connection, C const * const text, Values && ... values)
+		{
+			Prepare(connection, text, std::forward<Values>(values) ...);
+		}
 
 		explicit operator bool() const noexcept
 		{
@@ -235,15 +253,17 @@ class Statement : public Reader<Statement>
 		{
 			throw Exception(sqlite3_db_handle(GetAbi()));
 		}   
-
-		void Prepare(Connection const & connection, char const * const text)
+		
+		template <typename ... Values>
+		void Prepare(Connection const & connection, char const * const text, Values && ... values)
 		{
-			InternalPrepare(connection, sqlite3_prepare_v2, text);
+			InternalPrepare(connection, sqlite3_prepare_v2, text, std::forward<Values>(values) ...);
 		}
 
-		void Prepare(Connection const & connection, wchar_t const * const text)
+		template <typename ... Values>
+		void Prepare(Connection const & connection, wchar_t const * const text, Values && ... values)
 		{
-			InternalPrepare(connection, sqlite3_prepare16_v2, text);
+			InternalPrepare(connection, sqlite3_prepare16_v2, text, std::forward<Values>(values) ...);
 		}
 
 		bool Step() const
@@ -267,7 +287,7 @@ class Statement : public Reader<Statement>
 
 		void Execute() const
 		{
-			assert(!Step());
+			Step();
 		}
 
 		void Bind(int const index, int const value) const
@@ -325,7 +345,7 @@ class Statement : public Reader<Statement>
 			}
 		}
 
-		void Bind(int const index, std:wstring && value) const
+		void Bind(int const index, std::wstring && value) const
 		{
 			if (SQLITE_OK != sqlite3_bind_text16(GetAbi(), 
 							     index,
@@ -335,6 +355,12 @@ class Statement : public Reader<Statement>
 			{
 				ThrowLastError();
 			}
+		}
+	
+		template <typename ... Values>
+		void BindAll(Values && ... values) const
+		{
+			InternalBind(1, std::forward<Values>(values) ...);
 		}
 };
 
@@ -386,4 +412,10 @@ inline RowIterator begin(Statement const & statement) noexcept
 inline RowIterator end(Statement const &) noexcept
 {
 	return RowIterator();
+}
+
+template <typename C, typename ... Values>
+void Execute(Connection const & connection, C const * const text, Values && ... values)
+{
+	Statement(connection, text, std::forward<Values>(values) ...).Execute();
 }
